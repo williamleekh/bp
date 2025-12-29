@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>健康管家 - 血壓記錄管理系統</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Noto Sans TC', sans-serif; }
+        /* 自定義滾動條樣式 */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-800">
+
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 shadow-lg sticky top-0 z-20">
+        <div class="max-w-5xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <i data-lucide="activity" class="w-8 h-8"></i>
+                <h1 class="text-xl md:text-2xl font-bold tracking-wide">健康管家 BP Tracker</h1>
+            </div>
+            <div class="text-sm opacity-90 hidden md:block">
+                保持健康，從記錄開始
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto p-4 space-y-6">
+        
+        <!-- 統計卡片區域 -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4" id="stats-container">
+            <!-- 統計數據將由 JS 動態生成 -->
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- 左側：輸入表單 -->
+            <div class="lg:col-span-1 space-y-6">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div class="bg-slate-50 p-4 border-b border-slate-100 flex items-center gap-2">
+                        <i data-lucide="plus" class="w-5 h-5 text-blue-600"></i>
+                        <h2 class="font-semibold text-slate-700">新增測量記錄</h2>
+                    </div>
+                    <form id="bp-form" class="p-5 space-y-4">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="text-xs font-medium text-slate-500 ml-1">日期</label>
+                                <input type="date" id="input-date" required class="w-full mt-1 p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="text-xs font-medium text-slate-500 ml-1">時間</label>
+                                <input type="time" id="input-time" required class="w-full mt-1 p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="text-xs font-medium text-slate-500 ml-1">收縮壓 (SYS)</label>
+                                <input type="number" id="input-sys" placeholder="120" required min="50" max="300" class="w-full mt-1 p-3 text-lg font-bold text-center border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="text-xs font-medium text-slate-500 ml-1">舒張壓 (DIA)</label>
+                                <input type="number" id="input-dia" placeholder="80" required min="30" max="200" class="w-full mt-1 p-3 text-lg font-bold text-center border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="text-xs font-medium text-slate-500 ml-1">心率 (Pulse)</label>
+                            <div class="relative">
+                                <i data-lucide="heart" class="w-4 h-4 text-rose-400 absolute left-3 top-3.5"></i>
+                                <input type="number" id="input-pulse" placeholder="72" required min="30" max="250" class="w-full mt-1 p-2 pl-9 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="text-xs font-medium text-slate-500 ml-1">備註 (選填)</label>
+                            <input type="text" id="input-note" placeholder="例：剛運動完、吃藥後..." class="w-full mt-1 p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-xl shadow-md transition-all active:scale-[0.98] flex justify-center items-center gap-2">
+                            <i data-lucide="save" class="w-4 h-4"></i>
+                            儲存記錄
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- 健康小知識 -->
+                <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                    <h3 class="flex items-center gap-2 text-blue-800 font-bold mb-2">
+                        <i data-lucide="alert-circle" class="w-4 h-4"></i>
+                        血壓小知識
+                    </h3>
+                    <ul class="text-sm text-blue-900 space-y-1 ml-4 list-disc">
+                        <li>正常血壓：收縮壓 &lt; 120 且 舒張壓 &lt; 80</li>
+                        <li>高血壓前期：收縮壓 120-139 或 舒張壓 80-89</li>
+                        <li>測量前請靜坐休息至少 5 分鐘</li>
+                        <li>測量時手臂應與心臟同高</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 右側：圖表與列表 -->
+            <div class="lg:col-span-2 space-y-6">
+                
+                <!-- 圖表 -->
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="trending-up" class="w-5 h-5 text-slate-600"></i>
+                            <h2 class="font-semibold text-slate-700">近期血壓趨勢圖</h2>
+                        </div>
+                        <div class="text-xs text-slate-400 bg-slate-100 px-2 py-1 rounded">
+                            最近 15 筆
+                        </div>
+                    </div>
+                    
+                    <div class="relative h-[300px] w-full">
+                        <canvas id="bpChart"></canvas>
+                        <div id="no-data-msg" class="hidden absolute inset-0 flex items-center justify-center text-slate-400">
+                            尚無數據，請新增第一筆記錄
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 列表 -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="calendar" class="w-5 h-5 text-slate-600"></i>
+                            <h2 class="font-semibold text-slate-700">詳細記錄表</h2>
+                        </div>
+                        <button onclick="clearAllRecords()" class="text-xs text-red-500 hover:bg-red-50 px-2 py-1 rounded transition-colors">
+                            清空所有
+                        </button>
+                    </div>
+                    
+                    <div class="overflow-x-auto max-h-[400px] overflow-y-auto">
+                        <table class="w-full text-sm text-left">
+                            <thead class="text-xs text-slate-500 uppercase bg-slate-50 sticky top-0 z-10 shadow-sm">
+                                <tr>
+                                    <th class="px-4 py-3">日期時間</th>
+                                    <th class="px-4 py-3 text-center">收縮壓</th>
+                                    <th class="px-4 py-3 text-center">舒張壓</th>
+                                    <th class="px-4 py-3 text-center">心率</th>
+                                    <th class="px-4 py-3">狀態</th>
+                                    <th class="px-4 py-3">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="records-table-body" class="divide-y divide-slate-100">
+                                <!-- 列表內容將由 JS 生成 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- 1. 資料與狀態管理 ---
+        const DEFAULT_RECORDS = [
+            { id: 1, date: '2023-10-24', time: '08:00', sys: 118, dia: 78, pulse: 72, note: '起床後測量' },
+            { id: 2, date: '2023-10-25', time: '20:30', sys: 135, dia: 85, pulse: 75, note: '晚餐後，有點累' },
+            { id: 3, date: '2023-10-26', time: '07:45', sys: 122, dia: 80, pulse: 70, note: '正常' }
+        ];
+
+        let records = JSON.parse(localStorage.getItem('bp_records')) || DEFAULT_RECORDS;
+        let bpChart = null;
+
+        // --- 2. 輔助函數 ---
+        
+        // 血壓標準判斷
+        const getBPStatus = (sys, dia) => {
+            if (sys > 180 || dia > 120) return { label: '高血壓危象', color: 'text-red-700', bg: 'bg-red-100', dot: '#b91c1c' };
+            if (sys >= 140 || dia >= 90) return { label: '高血壓二期', color: 'text-red-600', bg: 'bg-red-50', dot: '#dc2626' };
+            if (sys >= 130 || dia >= 80) return { label: '高血壓一期', color: 'text-orange-600', bg: 'bg-orange-50', dot: '#ea580c' };
+            if (sys >= 120 && dia < 80) return { label: '血壓偏高', color: 'text-yellow-600', bg: 'bg-yellow-50', dot: '#ca8a04' };
+            return { label: '正常血壓', color: 'text-green-600', bg: 'bg-green-50', dot: '#16a34a' };
+        };
+
+        const saveRecords = () => {
+            localStorage.setItem('bp_records', JSON.stringify(records));
+            renderAll();
+        };
+
+        // --- 3. 渲染函數 ---
+
+        // 渲染統計卡片
+        const renderStats = () => {
+            const container = document.getElementById('stats-container');
+            if (records.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-4 text-center text-slate-400 py-4 bg-white rounded-2xl border border-slate-100">
+                        尚無統計數據
+                    </div>
+                `;
+                return;
+            }
+
+            const total = records.reduce((acc, curr) => ({
+                sys: acc.sys + Number(curr.sys),
+                dia: acc.dia + Number(curr.dia),
+                pulse: acc.pulse + Number(curr.pulse),
+            }), { sys: 0, dia: 0, pulse: 0 });
+
+            const avgSys = Math.round(total.sys / records.length);
+            const avgDia = Math.round(total.dia / records.length);
+            const avgPulse = Math.round(total.pulse / records.length);
+
+            container.innerHTML = `
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-center items-center">
+                    <span class="text-slate-500 text-sm mb-1">平均收縮壓</span>
+                    <div class="flex items-end gap-1">
+                        <span class="text-3xl font-bold ${avgSys > 130 ? 'text-red-600' : 'text-slate-800'}">${avgSys}</span>
+                        <span class="text-xs text-slate-400 mb-1">mmHg</span>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-center items-center">
+                    <span class="text-slate-500 text-sm mb-1">平均舒張壓</span>
+                    <div class="flex items-end gap-1">
+                        <span class="text-3xl font-bold ${avgDia > 80 ? 'text-orange-500' : 'text-slate-800'}">${avgDia}</span>
+                        <span class="text-xs text-slate-400 mb-1">mmHg</span>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-center items-center">
+                    <span class="text-slate-500 text-sm mb-1">平均心率</span>
+                    <div class="flex items-end gap-1">
+                        <span class="text-3xl font-bold text-slate-800">${avgPulse}</span>
+                        <span class="text-xs text-slate-400 mb-1">bpm</span>
+                    </div>
+                    <i data-lucide="heart" class="w-4 h-4 text-rose-500 mt-1"></i>
+                </div>
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-center items-center">
+                    <span class="text-slate-500 text-sm mb-1">總記錄數</span>
+                    <span class="text-3xl font-bold text-blue-600">${records.length}</span>
+                    <span class="text-xs text-slate-400 mt-1">筆資料</span>
+                </div>
+            `;
+        };
+
+        // 渲染列表
+        const renderTable = () => {
+            const tbody = document.getElementById('records-table-body');
+            tbody.innerHTML = '';
+
+            if (records.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-slate-400">暫無記錄</td></tr>`;
+                return;
+            }
+
+            // 排序：最新的在上面
+            const sortedRecords = [...records].sort((a, b) => new Date(b.date + 'T' + b.time) - new Date(a.date + 'T' + a.time));
+
+            sortedRecords.forEach(record => {
+                const status = getBPStatus(record.sys, record.dia);
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0';
+                tr.innerHTML = `
+                    <td class="px-4 py-3">
+                        <div class="font-medium text-slate-700">${record.date}</div>
+                        <div class="text-xs text-slate-400">${record.time}</div>
+                        ${record.note ? `<div class="text-xs text-slate-500 mt-1 italic text-ellipsis overflow-hidden max-w-[120px] whitespace-nowrap" title="${record.note}">${record.note}</div>` : ''}
+                    </td>
+                    <td class="px-4 py-3 text-center font-bold text-slate-700">${record.sys}</td>
+                    <td class="px-4 py-3 text-center font-bold text-slate-700">${record.dia}</td>
+                    <td class="px-4 py-3 text-center">
+                        <div class="flex items-center justify-center gap-1">
+                            ${record.pulse}
+                            <i data-lucide="heart" class="w-3 h-3 text-rose-300"></i>
+                        </div>
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${status.bg} ${status.color}">
+                            <span class="w-1.5 h-1.5 rounded-full mr-1.5" style="background-color: ${status.dot}"></span>
+                            ${status.label}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3">
+                        <button onclick="deleteRecord(${record.id})" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="刪除">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        };
+
+        // 渲染圖表
+        const renderChart = () => {
+            const ctx = document.getElementById('bpChart');
+            const noDataMsg = document.getElementById('no-data-msg');
+
+            if (records.length === 0) {
+                ctx.style.display = 'none';
+                noDataMsg.classList.remove('hidden');
+                return;
+            } else {
+                ctx.style.display = 'block';
+                noDataMsg.classList.add('hidden');
+            }
+
+            // 排序：舊的在左邊，新的在右邊
+            const chartData = [...records]
+                .sort((a, b) => new Date(a.date + 'T' + a.time) - new Date(b.date + 'T' + b.time))
+                .slice(-15); // 取最近 15 筆
+
+            const labels = chartData.map(r => r.date.slice(5)); // 月-日
+            const sysData = chartData.map(r => r.sys);
+            const diaData = chartData.map(r => r.dia);
+
+            if (bpChart) {
+                bpChart.destroy();
+            }
+
+            bpChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '收縮壓',
+                            data: sysData,
+                            borderColor: '#3b82f6', // blue-500
+                            backgroundColor: '#3b82f6',
+                            borderWidth: 3,
+                            tension: 0.3,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        },
+                        {
+                            label: '舒張壓',
+                            data: diaData,
+                            borderColor: '#8b5cf6', // violet-500
+                            backgroundColor: '#8b5cf6',
+                            borderWidth: 3,
+                            tension: 0.3,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: { usePointStyle: true, boxWidth: 8 }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            titleColor: '#1e293b',
+                            bodyColor: '#1e293b',
+                            borderColor: '#e2e8f0',
+                            borderWidth: 1,
+                            padding: 10,
+                            displayColors: true
+                        }
+                    },
+                    scales: {
+                        y: {
+                            min: 40,
+                            max: 180,
+                            grid: { color: '#f1f5f9' },
+                            ticks: { color: '#94a3b8' }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#94a3b8' }
+                        }
+                    }
+                }
+            });
+        };
+
+        const renderAll = () => {
+            renderStats();
+            renderTable();
+            renderChart();
+            lucide.createIcons(); // 刷新圖標
+        };
+
+        // --- 4. 事件處理 ---
+
+        // 初始化日期時間為現在
+        const initForm = () => {
+            const now = new Date();
+            // 處理時區問題，確保是當地時間字串
+            const localDate = now.toLocaleDateString('en-CA'); // YYYY-MM-DD
+            const localTime = now.toTimeString().slice(0, 5); // HH:MM
+
+            document.getElementById('input-date').value = localDate;
+            document.getElementById('input-time').value = localTime;
+        };
+
+        // 新增記錄
+        document.getElementById('bp-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const date = document.getElementById('input-date').value;
+            const time = document.getElementById('input-time').value;
+            const sys = document.getElementById('input-sys').value;
+            const dia = document.getElementById('input-dia').value;
+            const pulse = document.getElementById('input-pulse').value;
+            const note = document.getElementById('input-note').value;
+
+            if (!sys || !dia || !pulse) return;
+
+            const newRecord = {
+                id: Date.now(),
+                date,
+                time,
+                sys: Number(sys),
+                dia: Number(dia),
+                pulse: Number(pulse),
+                note
+            };
+
+            records.push(newRecord);
+            
+            // 清空數值欄位但保留日期時間
+            document.getElementById('input-sys').value = '';
+            document.getElementById('input-dia').value = '';
+            document.getElementById('input-pulse').value = '';
+            document.getElementById('input-note').value = '';
+            
+            saveRecords();
+        });
+
+        // 刪除記錄 (掛載到 window 以便 onclick 調用)
+        window.deleteRecord = (id) => {
+            if (confirm('確定要刪除這筆記錄嗎？')) {
+                records = records.filter(r => r.id !== id);
+                saveRecords();
+            }
+        };
+
+        // 清空所有 (掛載到 window)
+        window.clearAllRecords = () => {
+            if (confirm('確定要清空所有記錄嗎？')) {
+                records = [];
+                saveRecords();
+            }
+        };
+
+        // --- 5. 啟動 ---
+        initForm();
+        renderAll();
+
+    </script>
+</body>
+</html>
